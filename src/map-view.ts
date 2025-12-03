@@ -10,7 +10,7 @@ import {
 	ViewOption,
 } from 'obsidian';
 import { LngLatLike, Map, setRTLTextPlugin } from 'maplibre-gl';
-import type ObsidianMapsPlugin from './main';
+import type ObsidianBasesTimelinePlugin from './main';
 import { DEFAULT_MAP_HEIGHT, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from './map/constants';
 import { CustomZoomControl } from './map/controls/zoom-control';
 import { BackgroundSwitcherControl } from './map/controls/background-switcher';
@@ -41,7 +41,7 @@ export class MapView extends BasesView {
 	scrollEl: HTMLElement;
 	containerEl: HTMLElement;
 	mapEl: HTMLElement;
-	plugin: ObsidianMapsPlugin;
+  plugin: ObsidianBasesTimelinePlugin;
 
 	// Internal rendering data
 	private map: Map | null = null;
@@ -59,7 +59,7 @@ export class MapView extends BasesView {
 	// Static flag to track RTL plugin initialization
 	private static rtlPluginInitialized = false;
 
-	constructor(controller: QueryController, scrollEl: HTMLElement, plugin: ObsidianMapsPlugin) {
+  constructor(controller: QueryController, scrollEl: HTMLElement, plugin: ObsidianBasesTimelinePlugin) {
 		super(controller);
 		this.scrollEl = scrollEl;
 		this.plugin = plugin;

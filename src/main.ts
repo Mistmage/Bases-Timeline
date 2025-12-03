@@ -1,9 +1,10 @@
 import { Plugin } from 'obsidian';
 import { MapView } from './map-view';
+import { TimelineView } from './timeline-view';
 import { MapSettings, DEFAULT_SETTINGS, MapSettingTab } from './settings';
 
-export default class ObsidianMapsPlugin extends Plugin {
-	settings: MapSettings;
+export default class ObsidianBasesTimelinePlugin extends Plugin {
+		settings: MapSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -13,6 +14,13 @@ export default class ObsidianMapsPlugin extends Plugin {
 			icon: 'lucide-map',
 			factory: (controller, containerEl) => new MapView(controller, containerEl, this),
 			options: MapView.getViewOptions,
+		});
+
+		this.registerBasesView('timeline', {
+			name: 'Timeline',
+			icon: 'lucide-timeline',
+			factory: (controller, containerEl) => new TimelineView(controller, containerEl, this),
+			options: TimelineView.getViewOptions,
 		});
 
 		this.addSettingTab(new MapSettingTab(this.app, this));

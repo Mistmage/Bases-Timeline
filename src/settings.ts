@@ -1,5 +1,5 @@
 import { App, Modal, PluginSettingTab, Setting, setIcon, setTooltip } from 'obsidian';
-import ObsidianMapsPlugin from './main';
+import ObsidianBasesTimelinePlugin from './main';
 
 export interface TileSet {
 	id: string;
@@ -93,9 +93,9 @@ class TileSetModal extends Modal {
 }
 
 export class MapSettingTab extends PluginSettingTab {
-	plugin: ObsidianMapsPlugin;
+	plugin: ObsidianBasesTimelinePlugin;
 
-	constructor(app: App, plugin: ObsidianMapsPlugin) {
+	constructor(app: App, plugin: ObsidianBasesTimelinePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

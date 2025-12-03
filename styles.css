@@ -475,3 +475,85 @@ a.maplibregl-ctrl-logo.maplibregl-compact {
 	border: 2px dotted #202020;
 	opacity: 0.5;
 }
+
+/* Timeline view styles */
+.bases-view[data-view-type="timeline"] {
+  --bases-view-padding: 0;
+  position: relative;
+}
+
+.bases-timeline-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.bases-timeline {
+  position: relative;
+  margin-left: 12px;
+}
+
+.timeline-axis {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  background: var(--background-modifier-border);
+}
+
+.timeline-track {
+  position: absolute;
+  top: 0;
+}
+
+.timeline-bar {
+  position: absolute;
+  border-radius: 6px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  box-shadow: var(--shadow-s);
+  cursor: pointer;
+}
+
+.timeline-bar.is-conflict {
+  background: var(--color-red);
+}
+
+.timeline-bar-title {
+  font-size: var(--font-ui-smaller);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-events-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.timeline-card {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  padding: 6px 8px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  pointer-events: auto;
+}
+
+.timeline-events-overlay.show-lines::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--background-modifier-border);
+}
