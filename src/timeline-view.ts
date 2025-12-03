@@ -1,7 +1,7 @@
 import { BasesView, BasesPropertyId, debounce, Keymap, Menu, QueryController, Value, ViewOption } from 'obsidian';
 import type ObsidianBasesTimelinePlugin from './main';
 import { TimelineConfig, TimelineItem } from './timeline/types';
-import { buildTimelineItems, sortByIndexOrDate, assignTracks, detectIndexConflicts } from './timeline/algorithms';
+import { buildTimelineItems, sortByIndexOrDate, assignTracks, detectIndexConflicts, fromAbsoluteDay } from './timeline/algorithms';
 
 export const TimelineViewType = 'timeline';
 
@@ -14,8 +14,8 @@ export class TimelineView extends BasesView {
 
   private configCache: TimelineConfig | null = null;
   private scale: number = 8;
-  private minScale = 2;
-  private maxScale = 40;
+  private minScale = 0.1;
+  private maxScale = 200;
   private conflicts: Set<string> = new Set();
 
   constructor(controller: QueryController, scrollEl: HTMLElement, plugin: ObsidianBasesTimelinePlugin) {
@@ -80,7 +80,7 @@ export class TimelineView extends BasesView {
     const calendarProp = this.config.getAsPropertyId('calendar');
     const modeRaw = this.config.get('mode');
     const mode = modeRaw === 'events' ? 'events' : 'notes';
-    const pixelsPerDay = this.getNumericConfig('pixelsPerDay', this.scale, 2, 60);
+    const pixelsPerDay = this.getNumericConfig('pixelsPerDay', this.scale, 0.1, 200);
     this.scale = pixelsPerDay;
     return { dateStartProp, dateEndProp, indexProp, calendarProp, mode, pixelsPerDay };
   }
@@ -114,8 +114,9 @@ export class TimelineView extends BasesView {
     const maxDay = Math.max(...sorted.map(i => i.range.endDay));
     const totalDays = Math.max(1, maxDay - minDay + 1);
     const trackCount = assigned.tracks.length;
+    const axisWidth = 120;
     const columnWidth = 160;
-    const width = Math.max(columnWidth * trackCount, 160);
+    const width = Math.max(axisWidth + columnWidth * trackCount, axisWidth);
     const height = Math.max(totalDays * this.scale, 200);
 
     this.canvasEl.style.width = width + 'px';
@@ -123,10 +124,12 @@ export class TimelineView extends BasesView {
 
     const axis = this.canvasEl.createDiv('timeline-axis');
     axis.style.height = height + 'px';
+    axis.style.width = axisWidth + 'px';
+    this.renderAxisLabels(axis, minDay, maxDay);
 
     for (let t = 0; t < assigned.tracks.length; t++) {
       const trackEl = this.canvasEl.createDiv('timeline-track');
-      trackEl.style.left = (t * columnWidth) + 'px';
+      trackEl.style.left = (axisWidth + t * columnWidth) + 'px';
       trackEl.style.width = columnWidth + 'px';
       for (const item of assigned.tracks[t]) {
         const top = (item.range.startDay - minDay) * this.scale;
@@ -195,9 +198,9 @@ export class TimelineView extends BasesView {
             displayName: 'Pixels per day',
             type: 'slider',
             key: 'pixelsPerDay',
-            min: 2,
-            max: 60,
-            step: 1,
+            min: 0.1,
+            max: 200,
+            step: 0.1,
             default: 8,
           },
         ],
@@ -237,6 +240,28 @@ export class TimelineView extends BasesView {
         ],
       },
     ];
+  }
+
+  private renderAxisLabels(axisEl: HTMLElement, minDay: number, maxDay: number): void {
+    const totalDays = Math.max(1, maxDay - minDay + 1);
+    const interval = this.getTickInterval(this.scale);
+    for (let day = minDay; day <= maxDay; day += interval) {
+      const top = (day - minDay) * this.scale;
+      const tick = axisEl.createDiv('timeline-axis-tick');
+      tick.style.top = top + 'px';
+      const label = tick.createDiv('timeline-axis-label');
+      const { y, m, d } = fromAbsoluteDay(day);
+      label.setText(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    }
+  }
+
+  private getTickInterval(scale: number): number {
+    if (scale <= 0.2) return 365;
+    if (scale <= 0.5) return 120;
+    if (scale <= 1) return 30;
+    if (scale <= 2) return 7;
+    if (scale <= 5) return 1;
+    return 1;
   }
 }
 

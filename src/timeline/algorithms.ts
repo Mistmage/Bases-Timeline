@@ -81,6 +81,40 @@ export function toAbsoluteDayWithMonths(y: number, m: number, d: number, months:
   return days;
 }
 
+export function fromAbsoluteDay(yday: number): { y: number; m: number; d: number } {
+  let day = yday;
+  let y = 0;
+  while (true) {
+    const leap = (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+    const yearDays = leap ? 366 : 365;
+    if (day < yearDays) break;
+    day -= yearDays;
+    y++;
+  }
+  const leap = (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+  const md = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let m = 1;
+  for (let i = 0; i < md.length; i++) {
+    if (day < md[i]) { m = i + 1; break; }
+    day -= md[i];
+  }
+  const d = day + 1;
+  return { y, m, d };
+}
+
+export function fromAbsoluteDayWithMonths(yday: number, months: number[]): { y: number; m: number; d: number } {
+  const yearDays = months.reduce((a, b) => a + b, 0);
+  const y = Math.floor(yday / yearDays);
+  let day = yday - y * yearDays;
+  let m = 1;
+  for (let i = 0; i < months.length; i++) {
+    if (day < months[i]) { m = i + 1; break; }
+    day -= months[i];
+  }
+  const d = Math.min(months[m - 1] ?? 30, day + 1);
+  return { y, m, d };
+}
+
 export function extractDateRange(entry: BasesEntry, startProp: BasesPropertyId | null, endProp: BasesPropertyId | null, calendarMonths?: number[]): NormalizedDateRange | null {
   if (!startProp) return null;
   const startVal = entry.getValue(startProp);

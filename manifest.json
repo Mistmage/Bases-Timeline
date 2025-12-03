@@ -1,7 +1,7 @@
 {
   "id": "bases-timeline",
   "name": "Bases Timeline",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "minAppVersion": "1.10.2",
   "description": "Adds a vertical Timeline layout to Bases with duration bars, events, and a Map view.",
 	"author": "Obsidian",

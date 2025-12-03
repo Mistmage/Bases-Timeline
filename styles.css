@@ -497,8 +497,7 @@ a.maplibregl-ctrl-logo.maplibregl-compact {
   position: absolute;
   left: 0;
   top: 0;
-  width: 2px;
-  background: var(--background-modifier-border);
+  background: transparent;
 }
 
 .timeline-track {
@@ -556,4 +555,20 @@ a.maplibregl-ctrl-logo.maplibregl-compact {
   bottom: 0;
   width: 2px;
   background: var(--background-modifier-border);
+}
+
+.timeline-axis-tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--background-modifier-border);
+}
+
+.timeline-axis-label {
+  position: absolute;
+  left: 8px;
+  top: -8px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
 }
