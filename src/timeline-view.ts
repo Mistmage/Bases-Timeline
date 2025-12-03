@@ -14,7 +14,7 @@ export class TimelineView extends BasesView {
 
   private configCache: TimelineConfig | null = null;
   private scale: number = 8;
-  private minScale = 0.1;
+  private minScale = 0.001;
   private maxScale = 200;
   private conflicts: Set<string> = new Set();
 
@@ -40,14 +40,19 @@ export class TimelineView extends BasesView {
   };
 
   private onWheelZoom = (evt: WheelEvent): void => {
-    evt.preventDefault();
-    const delta = Math.sign(evt.deltaY);
-    const factor = delta > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(this.minScale, Math.min(this.maxScale, this.scale * factor));
-    if (Math.abs(newScale - this.scale) > 0.1) {
-      this.scale = newScale;
-      this.renderTimeline();
+    const target = evt.target as HTMLElement | null;
+    const overAxis = Boolean(target?.closest('.timeline-axis'));
+    if (overAxis) {
+      evt.preventDefault();
+      const delta = Math.sign(evt.deltaY);
+      const factor = delta > 0 ? 0.9 : 1.1;
+      const newScale = Math.max(this.minScale, Math.min(this.maxScale, this.scale * factor));
+      if (Math.abs(newScale - this.scale) > 1e-6) {
+        this.scale = newScale;
+        this.renderTimeline();
+      }
     }
+    // otherwise allow default scrolling
   };
 
   private onResizeDebounce = debounce(() => this.renderTimeline(), 100, true);
@@ -80,7 +85,7 @@ export class TimelineView extends BasesView {
     const calendarProp = this.config.getAsPropertyId('calendar');
     const modeRaw = this.config.get('mode');
     const mode = modeRaw === 'events' ? 'events' : 'notes';
-    const pixelsPerDay = this.getNumericConfig('pixelsPerDay', this.scale, 0.1, 200);
+    const pixelsPerDay = this.getNumericConfig('pixelsPerDay', this.scale, 0.001, 200);
     this.scale = pixelsPerDay;
     return { dateStartProp, dateEndProp, indexProp, calendarProp, mode, pixelsPerDay };
   }
@@ -126,6 +131,7 @@ export class TimelineView extends BasesView {
     axis.style.height = height + 'px';
     axis.style.width = axisWidth + 'px';
     this.renderAxisLabels(axis, minDay, maxDay);
+    // axis zoom is handled by onWheelZoom via delegation
 
     for (let t = 0; t < assigned.tracks.length; t++) {
       const trackEl = this.canvasEl.createDiv('timeline-track');
@@ -198,9 +204,9 @@ export class TimelineView extends BasesView {
             displayName: 'Pixels per day',
             type: 'slider',
             key: 'pixelsPerDay',
-            min: 0.1,
+            min: 0.001,
             max: 200,
-            step: 0.1,
+            step: 0.001,
             default: 8,
           },
         ],
@@ -243,25 +249,89 @@ export class TimelineView extends BasesView {
   }
 
   private renderAxisLabels(axisEl: HTMLElement, minDay: number, maxDay: number): void {
-    const totalDays = Math.max(1, maxDay - minDay + 1);
-    const interval = this.getTickInterval(this.scale);
-    for (let day = minDay; day <= maxDay; day += interval) {
-      const top = (day - minDay) * this.scale;
+    const minLabelPx = 40;
+    const ppd = this.scale;
+    const ticks = this.computeTicks(minDay, maxDay, ppd, minLabelPx);
+    for (const t of ticks) {
+      const top = (t.day - minDay) * ppd;
       const tick = axisEl.createDiv('timeline-axis-tick');
       tick.style.top = top + 'px';
       const label = tick.createDiv('timeline-axis-label');
-      const { y, m, d } = fromAbsoluteDay(day);
-      label.setText(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      label.setText(t.label);
     }
   }
 
-  private getTickInterval(scale: number): number {
-    if (scale <= 0.2) return 365;
-    if (scale <= 0.5) return 120;
-    if (scale <= 1) return 30;
-    if (scale <= 2) return 7;
-    if (scale <= 5) return 1;
-    return 1;
+  private computeTicks(minDay: number, maxDay: number, ppd: number, minLabelPx: number): Array<{ day: number; label: string }> {
+    const out: Array<{ day: number; label: string }> = [];
+    const dailyOk = ppd * 1 >= minLabelPx;
+    const weeklyOk = ppd * 7 >= minLabelPx;
+    const monthlyOk = ppd * 30 >= minLabelPx;
+    const yearlyOk = ppd * 365 >= minLabelPx;
+    if (dailyOk) {
+      for (let day = minDay; day <= maxDay; day += 1) {
+        const { y, m, d } = fromAbsoluteDay(day);
+        out.push({ day, label: `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}` });
+      }
+      return out;
+    }
+    if (weeklyOk) {
+      let day = minDay - ((minDay % 7 + 7) % 7);
+      if (day < minDay) day += 7;
+      for (; day <= maxDay; day += 7) {
+        const { y, m, d } = fromAbsoluteDay(day);
+        out.push({ day, label: `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}` });
+      }
+      return out;
+    }
+    if (monthlyOk) {
+      let { y, m } = fromAbsoluteDay(minDay);
+      let start = this.firstDayOfMonth(y, m);
+      if (start < minDay) {
+        ({ y, m } = this.nextMonth(y, m));
+        start = this.firstDayOfMonth(y, m);
+      }
+      while (start <= maxDay) {
+        out.push({ day: start, label: `${y}-${String(m).padStart(2,'0')}` });
+        ({ y, m } = this.nextMonth(y, m));
+        start = this.firstDayOfMonth(y, m);
+      }
+      return out;
+    }
+    // fall back to yearly
+    let { y } = fromAbsoluteDay(minDay);
+    let start = this.firstDayOfYear(y);
+    if (start < minDay) { y += 1; start = this.firstDayOfYear(y); }
+    while (start <= maxDay) {
+      out.push({ day: start, label: `${y}` });
+      y += 1; start = this.firstDayOfYear(y);
+    }
+    return out;
+  }
+
+  private firstDayOfMonth(y: number, m: number): number {
+    let day = 0;
+    for (let yy = 0; yy < y; yy++) {
+      const leap = (yy % 4 === 0 && yy % 100 !== 0) || (yy % 400 === 0);
+      day += leap ? 366 : 365;
+    }
+    const leap = (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+    const md = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    for (let i = 0; i < m - 1; i++) day += md[i];
+    return day;
+  }
+
+  private nextMonth(y: number, m: number): { y: number; m: number } {
+    m += 1; if (m > 12) { m = 1; y += 1; }
+    return { y, m };
+  }
+
+  private firstDayOfYear(y: number): number {
+    let day = 0;
+    for (let yy = 0; yy < y; yy++) {
+      const leap = (yy % 4 === 0 && yy % 100 !== 0) || (yy % 400 === 0);
+      day += leap ? 366 : 365;
+    }
+    return day;
   }
 }
 
